@@ -1,3 +1,4 @@
 .npmrc
 gen/sdk-triplea-js
 modules
+node_modules

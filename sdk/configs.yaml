@@ -1,0 +1,4 @@
+# sdk-node configs
+modelPropertyNaming: 'original'
+npmName: '@akanta21/sdk-triplea-js'
+npmVersion: '0.0.2'

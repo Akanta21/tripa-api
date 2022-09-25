@@ -6,8 +6,12 @@
 
 ## How to generate client?
 ```
-./run-in-docker.sh generate -i swagger/triplea.yaml -l {desiredLanguage} -o /work/generated/{generatedFolderName} -D packageName=triplea
+npm run generate-client:node
 ```
+
+## How to use the generated client?
+
+Do go through example/app.js
 
 ## Available Language for this above command:
 - ada

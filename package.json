@@ -1,0 +1,5 @@
+{
+  "scripts":{
+    "generate-client:node": "docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate -i local/swagger/triplea.yaml -g typescript-axios -o /local/client/node -c /local/sdk/configs.yaml"
+  }
+}
