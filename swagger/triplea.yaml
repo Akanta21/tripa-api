@@ -1,0 +1,356 @@
+swagger: '2.0'
+info:
+  description: This is the swagger with reference to https://developers.triple-a.io/docs/triplea-api-doc
+  version: 1.0.0
+  title: Triple A API
+  contact:
+    email: support@triple-a.io
+  license:
+    name: Apache-2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+host: 'api.triple-a.io'
+basePath: /api/v2
+tags:
+  - name: Triple A
+    description: Everything about TripleA
+    externalDocs:
+      description: Find out more
+      url: 'https://developers.triple-a.io/docs/triplea-api-doc/42cb1cde9fbae-introduction'
+schemes:
+  - https
+  - http
+paths:
+  /oauth/token:
+    post:
+      tags:
+       - auth
+      summary: Authentication
+      operationId: authorizeUser
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - in: formData
+          name: client_id
+          type: string
+          description: Client ID provided during sign up
+        - in: formData
+          name: client_secret
+          type: string
+          description: Client Secret provided during sign up
+        - in: formData
+          name: grant_type
+          type: string
+          description: Desired grant_type
+      responses:
+        '200':
+          description: successful authorization
+          schema:
+            $ref: '#/definitions/AuthResponse'
+        '401':
+          $ref: '#/definitions/401Error'        
+  /payout/balances:
+    get:
+      tags:
+        - payout
+      summary: Available balance
+      description: Available balance in merchant's preferred local currency
+      operationId: getPayoutBalance
+      produces:
+        - application/json
+      security:
+        - bearer_auth: []        
+      responses:
+        '200':
+          description: Successfully retrieve merchant balances
+          schema:
+            $ref: '#/definitions/MerchantBalances'
+        '401':
+          description: Invalid Token
+          schema:
+            $ref: '#/definitions/401Error'
+  /payment:
+    post:
+      tags:
+        - payment
+      summary: Create payment request
+      description: This endpoint covers the two use-cases of external-url-payment and embedded payment form
+      operationId: createPaymentRequest
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      security:
+        - bearer_auth: []        
+      parameters:
+        - in: body
+          name: body
+          description: Payment Request that would be used to create
+          required: true
+          schema:
+            $ref: '#/definitions/PaymentRequest'
+      responses:
+        '200':
+          description: successful creation of payment
+          schema:
+            $ref: '#/definitions/Payment'
+        '401':
+          description: Invalid Token
+          schema:
+            $ref: '#/definitions/401Error'        
+        '422':
+          description: Validation Error
+          schema:
+            $ref: '#/definitions/422Error'
+          
+  
+securityDefinitions:
+  bearer_auth:
+    name: "Authorization"
+    type: "apiKey"
+    in: "header"
+    description: "JWT Authorization header"
+
+definitions:
+  AuthResponse:
+    title: AuthenticationResponse
+    description: Detailed Authentication Response with Access Token Required for subsequent calls
+    type: object
+    properties:
+      access_token:
+        type: string
+      token_type:
+        type: string
+      expires_in:
+        type: integer
+        format: int64
+
+  MerchantBalances:
+    title: MerchantBalances
+    description: List of merchant balances
+    type: array
+    items:
+      $ref: '#/definitions/MerchantBalance'
+
+  MerchantBalance:
+    title: MerchantBalance
+    description: merchant balance
+    type: object
+    properties:
+      merchant_key:
+        type: string
+      merchant_name:
+        type: string
+      balances:
+        type: array
+        items:
+          $ref: '#/definitions/CurrencyBalance'
+
+  CurrencyBalance:
+    title: CurrencyBalance
+    description: balance of a specific currency
+    type: object
+    properties:
+      type: 
+        type: string
+      available_currency:
+        type: string
+        example: 'USD'
+      available_amount:
+        type: integer
+        format: int64
+        
+  PaymentRequest:
+    title: PaymentRequest
+    description: Payment Request Object
+    type: object
+    required:
+      - type
+      - merchant_key
+      - order_currency
+      - order_amount
+    properties:
+      type:
+        type: string
+        format: int64
+        description: use triplea for external URL Payment Form and widget for hosted_url to be displayed on iframe or Webview
+        enum:
+          - triplea
+          - widget
+      merchant_key:
+        type: string
+      order_currency:
+        type: string
+        description: follow the 3-character from https://en.wikipedia.org/wiki/ISO_4217
+        example: 'USD'      
+      order_amount:
+        type: integer
+        format: int64
+        example: 10
+      notify_email:
+        type: string
+        description: Where to send the email notification for this payment request
+      notify_url:
+        type: string
+        description: The URL to send the webhook notification
+      notify_secret:
+        type: string
+        description: The shared secret that will be used to sign the notification. This secret can be at most 64 characters long.
+      notify_txs:
+        type: boolean
+        description: Flag to include the individual txs in the webhook notification
+      order_id:
+        type: string
+        description: Idempotency key. Merchant's unique ID for the payout
+      payer_id:
+        type: string
+        description: The merchant needs to provide a unique ID for each payer. If the merchant does not have a unique ID then use the payer’s email address.
+      payer_name: 
+        type: string
+        description: If you do not have the payer's name, then leave this key out of the JSON object. Do not submit an empty string "".
+      payer_email:
+        type: string
+        description: If you do not have the payer's email, then leave this key out of the JSON object. Do not submit an empty string ""
+      payer_phone:
+        type: string
+        description: Payer's phone number in E.164 format.  If you do not have the payer's phone number, then leave this key out of the JSON object. Do not submit an empty string ""
+      payer_address:
+        type: string
+        description: Do not submit an empty string ""
+      payer_poi:
+        type: string
+        description: URL to the payer's Proof-Of-Identity (POI). Our system will download the payer's POI from this link.
+      payer_ip:
+        type: string
+        description: IP address of the payer
+      success_url:
+        type: string
+        description: Webpage to redirect the customer to on successful payment. 
+        example: https://www.myshop.com/payment-success
+      cancel_url:
+        type: string
+        description: Webpage to redirect the customer to on cancelled payment
+        example: https://www.myshop.com/payment-failure
+      cart:
+        type: object
+        description: Optional Shopping Cart
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/definitions/CartItem'
+          shipping_cost:
+            type: integer
+          shipping_discount:
+            type: integer
+          tax_cost:
+            type: integer
+      webhook_data:
+        type: object
+        description: We recommend that you at least include the order_id which ties this payment request to the order in your system. 
+        example: {"order_id":"ABC12345-12"}
+      sub_merchant:
+        $ref: '#/definitions/SubMerchant'
+  Payment:
+    title: PaymentResponse
+    description: Payment Response Object
+    type: object
+    properties:
+      payment_reference:
+        type: string
+        description: Unique Payment Reference Number that identifies this payment
+        example: SDF-453672-PMT
+      order_currency:
+        type: string
+      order_amount:
+        type: integer
+        format: int64
+      expiry_date:
+        type: string
+        description: Exchange rate is guaranteed until the expiry date.
+        example: '2020-01-26T03:57:22Z'
+      hosted_url:
+        type: string
+        description: Redirect the payer's browser to this URL for them to make payment
+        example: https://triple-a.io/app/v1/payment_form?payment_reference=SDF-453672-PMT&access_token=1aa03d46aee08c6539db7b8afccaaa49f9d0f968
+      access_token: 
+        type: string
+        description: Oauth2 access token used specifically for this payment request
+      token_type:
+        type: string
+        description: Bearer
+      expires_in: 
+        type: integer
+        description: until the access_token expires
+      notify_secret:
+        type: string
+        description: The shared secret that will be used to sign the notification. If the secret was provided in the payment request, it will be mirrored here. If not a random secret will be generated        
+  CartItem:
+    title: ItemInCart
+    description: item
+    type: object
+    properties:
+      sku: 
+        type: string
+        description: Stock Keeping Unit of the item
+        example: ABC123
+      label:
+        type: string
+        description: Name and/or description of the item
+        example: 'A tale of two cities'
+      quantity:
+        type: integer
+        description: Number of units of the item
+        format: float
+      amount:
+        type: integer
+        description: Total price of all the units of the item
+        format: float
+  SubMerchant:
+    title: SubMerchantDetails
+    description: details of submerchant
+    type: object
+    properties:
+      id: 
+        type: string
+        description: ID of Submerchant
+        example: ABC123
+      name:
+        type: string
+        description: Name of the Submerchant
+        example: 'Test Payer'
+      phone_number:
+        type: string
+        description: Phone Number of Submerchant
+        example: '+6591234467'
+      email:
+        type: string
+        description: Email of Submerchant
+        format: 'testpayer@gmail.com'
+  401Error:
+    title: Invalid Credential Error
+    type: object
+    properties:
+      message:
+        type: string
+  422Error:
+    title: Validation Error
+    type: object
+    properties:
+      message:
+        type: string
+      errors:
+        type: array
+        items:
+          $ref: '#/definitions/ValidationErrorItem'
+  ValidationErrorItem:
+    title: Validation error item
+    type: object
+    properties:
+      message: 
+        type: string
+      path:
+        type: string
+        
+externalDocs:
+  description: Find out more about Swagger
+  url: 'https://developers.triple-a.io/docs/triplea-api-doc/42cb1cde9fbae-introduction'
